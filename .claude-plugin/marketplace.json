@@ -1,0 +1,6 @@
+{
+  "name": "setup-watch",
+  "owner": { "name": "Roma K." },
+  "description": "Reports new skills, tools and MCP servers that updates add to your context window.",
+  "plugins": [{ "name": "setup-watch", "source": "./" }]
+}
