@@ -1,6 +1,6 @@
 # setup-watch: a Claude Code plugin that tracks new skills, MCP servers and tools in your context window
 
-**setup-watch** is a free, open source [Claude Code](https://docs.claude.com/en/docs/claude-code) plugin (also called a Claude Code mod or extension). At the start of every session it tells you which **skills, slash commands, MCP servers, plugins and built-in tools** were added, removed or updated since your last session. Use it to catch context window bloat early and keep your token usage down.
+**setup-watch** is a free, open source [Claude Code](https://docs.claude.com/en/docs/claude-code) plugin (also called a Claude Code mod or extension). At the start of every session it tells you which **skills, slash commands, MCP servers, plugins and built-in tools** were added, removed or updated since your last session, without you doing anything. Use it to catch context window bloat early and keep your token usage down.
 
 - No setup. Install it and it runs.
 - No model calls. It costs **zero tokens**.
@@ -24,22 +24,36 @@ Fifteen seconds into a session, after a Claude Code update:
 setup-watch: changed since last session:
 setup-watch: ~ Claude Code: version 2.1.314 -> 2.1.316
 setup-watch: + builtin commands: design, slides, verify
-setup-watch: + plugins: foo@bar
-setup-watch: ~ MCP servers: headroom 3 -> 5
-setup-watch: - user commands: old-skill
+setup-watch: + skills synced from claude.ai (Anthropic): xlsx
+setup-watch: ~ plugins: context-mode@context-mode 1.0.168 -> 1.0.169
+setup-watch: + plugin commands: context-mode:ctx-insight
+setup-watch: ~ MCP servers (from plugins): plugin_context-mode_context-mode 9 -> 11
 ```
 
 `+` added, `-` removed, `~` changed. MCP server numbers are tool counts.
 
 ## What it tracks
 
+By default setup-watch reports only what changed **under you**: things you didn't do yourself.
+
 | What | Detects |
 | --- | --- |
 | Claude Code version | CLI updates that ship new built-in skills and tools |
-| Installed plugins | new, removed, updated, enabled or disabled plugins |
-| MCP servers | new or removed servers, and changes in each server's tool count |
-| Skills and slash commands | built-in, plugin, MCP and your own `~/.claude` skills and commands |
-| Built-in tools | new or removed tools such as `WebSearch` or `Monitor` |
+| Built-in skills, commands and tools | what each Claude Code update adds or removes, such as `WebSearch` or `/design` |
+| Skills synced from claude.ai | skills Anthropic pushes to your account (`docx`, `pdf`, `pptx`...) |
+| Plugin auto-updates | version bumps of installed plugins, and the skills and commands each update adds |
+| Plugin MCP servers | servers a plugin starts, and changes in each server's tool count |
+| claude.ai connectors | MCP connectors added to your claude.ai account, such as Gmail or Drive |
+
+### Tracking your own changes too
+
+Changes you make yourself are hidden by default, since you already know about them:
+
+- plugins you install or uninstall, and their skills
+- your own skills and commands in `~/.claude`
+- MCP servers you add with `claude mcp add` or `.mcp.json`
+
+To report them as well, open `/config`, find **setup-watch: Track your own changes** and turn it on. Turning it on or off never shows false changes: setup-watch always records everything and only filters the report.
 
 ## Install
 
@@ -74,6 +88,14 @@ Use `/plugin` to disable or uninstall plugins, which also removes their skills. 
 ### Does setup-watch use tokens or send data anywhere?
 
 No. It reads Claude Code's own lists of commands, tools and plugins locally, and stores one snapshot in the plugin's local store. It never calls the model or the network.
+
+### How does it tell Anthropic's changes from mine?
+
+Built-in items come from Claude Code itself. Skills synced from claude.ai live in `~/.claude/skills/synced` with a manifest naming their publisher. Claude Code labels these `user` like your own skills, so setup-watch reads the manifest to separate them. Plugin version bumps come from marketplace auto-updates. A plugin appearing or disappearing, a skill in `~/.claude/skills` and an MCP server outside any plugin are treated as yours.
+
+### Why didn't a plugin I installed show up?
+
+With the default settings your own installs are hidden. Turn on **Track your own changes** in `/config`. Also, a plugin with no skills or commands (an LSP plugin, for example) only shows as one `plugins` line.
 
 ### Why does it wait 15 seconds?
 
