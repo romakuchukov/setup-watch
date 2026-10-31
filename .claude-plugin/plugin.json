@@ -2,15 +2,9 @@
   "name": "setup-watch",
   "version": "0.1.0",
   "description": "Updates can add skills, tools and MCP servers without telling you, and each one quietly eats context. setup-watch tells you at session start what changed under you since your last session, so you can disable what you don't use.",
-  "author": { "name": "Roma K." },
-  "license": "MIT",
-  "userConfig": {
-    "trackOwn": {
-      "type": "boolean",
-      "title": "Track your own changes",
-      "description": "Also report what you changed yourself: plugins you install or uninstall, your ~/.claude skills and commands, and MCP servers you add.",
-      "default": false
-    }
+  "author": {
+    "name": "Roma K."
   },
+  "license": "MIT",
   "hooks": "./hooks/hooks.json"
 }

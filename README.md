@@ -53,7 +53,15 @@ Changes you make yourself are hidden by default, since you already know about th
 - your own skills and commands in `~/.claude`
 - MCP servers you add with `claude mcp add` or `.mcp.json`
 
-To report them as well, open `/config`, find **setup-watch: Track your own changes** and turn it on. Turning it on or off never shows false changes: setup-watch always records everything and only filters the report.
+To report them as well, run `/setup-watch own on`. Turn it back off with `/setup-watch own off`. Switching never shows false changes: setup-watch always records everything and only filters the report.
+
+## Commands
+
+| Command | Does |
+| --- | --- |
+| `/setup-watch` | shows the current setting and this session's report again |
+| `/setup-watch own on` | also reports changes you made yourself |
+| `/setup-watch own off` | hides your own changes again (the default) |
 
 ## Install
 
@@ -95,7 +103,7 @@ Built-in items come from Claude Code itself. Skills synced from claude.ai live i
 
 ### Why didn't a plugin I installed show up?
 
-With the default settings your own installs are hidden. Turn on **Track your own changes** in `/config`. Also, a plugin with no skills or commands (an LSP plugin, for example) only shows as one `plugins` line.
+With the default settings your own installs are hidden. Run `/setup-watch own on`. Also, a plugin with no skills or commands (an LSP plugin, for example) only shows as one `plugins` line.
 
 ### Why does it wait 15 seconds?
 

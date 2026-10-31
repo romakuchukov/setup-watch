@@ -7,6 +7,8 @@ type Snapshot = Record<string, Record<string, string>>
 const STORE_KEY = 'snapshot-4'
 // MCP servers connect after session.start; listing earlier reports them as removed.
 const SETTLE_MS = 15_000
+const COMMAND = 'setup-watch'
+const USAGE = 'Usage: /setup-watch (status and last report), /setup-watch own on|off'
 
 export function diff(before: Snapshot, after: Snapshot): string[] {
   const lines: string[] = []
@@ -108,8 +110,19 @@ async function snapshot($: EngineInterface): Promise<Snapshot> {
   return items
 }
 
-export const register: Register = (on, options) => {
+const TRACK_OWN_KEY = 'track-own'
+
+async function isTrackingOwn($: EngineInterface): Promise<boolean> {
+  return (await $.store.get(TRACK_OWN_KEY)) === true
+}
+
+export const register: Register = on => {
   on('session.start', async ($, e, next) => {
+    await $.command.register({
+      name: COMMAND,
+      description: 'Show what changed in your setup, or turn tracking of your own changes on or off',
+      argumentHint: 'own on|off',
+    })
     $.clock.after(SETTLE_MS, async () => {
       const current = await snapshot($)
       const previous = (await $.store.get(STORE_KEY)) as Snapshot | undefined
@@ -120,7 +133,8 @@ export const register: Register = (on, options) => {
         return
       }
       // Filtered at report time, so turning the option on or off never shows false changes.
-      const changes = options.trackOwn === true ? diff(previous, current) : diff(...withoutOwn(previous, current))
+      const changes = (await isTrackingOwn($)) ? diff(previous, current) : diff(...withoutOwn(previous, current))
+      await $.store.set('last-report', changes)
       if (changes.length === 0) return
       // A log row is one line: newlines draw as junk, so each change gets its own row.
       $.ui.log('changed since last session:')
@@ -128,5 +142,23 @@ export const register: Register = (on, options) => {
     })
 
     return next(e)
+  })
+
+  on('command.run', { command: COMMAND }, async ($, e) => {
+    const [subcommand, value] = e.args.trim().split(/\s+/)
+    if (subcommand === 'own' && (value === 'on' || value === 'off')) {
+      await $.store.set(TRACK_OWN_KEY, value === 'on')
+      return { text: `Tracking your own changes is now ${value}. It applies from the next session's report.` }
+    }
+    if (subcommand !== undefined && subcommand !== '') return { text: USAGE }
+
+    const report = ((await $.store.get('last-report')) as string[] | undefined) ?? []
+    const lines = [
+      `Tracking your own changes: ${(await isTrackingOwn($)) ? 'on' : 'off'}`,
+      report.length > 0 ? 'Changed at the start of this session:' : 'Nothing changed at the start of this session.',
+      ...report,
+      USAGE,
+    ]
+    return { text: lines.join('\n') }
   })
 }
