@@ -21,16 +21,10 @@ The `/context` command shows what is loaded right now, but not what is **new**. 
 Fifteen seconds into a session, after a Claude Code update:
 
 ```
-setup-watch: changed since last session:
-setup-watch: ~ Claude Code: version 2.1.314 -> 2.1.316
-setup-watch: + builtin commands: design, slides, verify
-setup-watch: + skills synced from claude.ai (Anthropic): xlsx
-setup-watch: ~ plugins: context-mode@context-mode 1.0.168 -> 1.0.169
-setup-watch: + plugin commands: context-mode:ctx-insight
-setup-watch: ~ MCP servers (from plugins): plugin_context-mode_context-mode 9 -> 11
+setup-watch: changed since last session: ~ Claude Code: version 2.1.314 -> 2.1.316; + builtin commands: design, slides, verify; + skills synced from claude.ai (Anthropic): xlsx; ~ plugins: context-mode@context-mode 1.0.168 -> 1.0.169; + plugin commands: context-mode:ctx-insight; ~ MCP servers (from plugins): plugin_context-mode_context-mode 9 -> 11
 ```
 
-`+` added, `-` removed, `~` changed. MCP server numbers are tool counts.
+One line, changes separated by `;`. `+` added, `-` removed, `~` changed. MCP server numbers are tool counts.
 
 ## What it tracks
 

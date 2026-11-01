@@ -149,9 +149,8 @@ export const register: Register = on => {
       const changes = (await isTrackingOwn($)) ? diff(previous, current) : diff(...withoutOwn(previous, current))
       await $.store.set('last-report', changes)
       if (changes.length === 0) return
-      // A log row is one line: newlines draw as junk, so each change gets its own row.
-      $.ui.log('changed since last session:')
-      for (const line of changes) $.ui.log(line)
+      // A log row is one line: newlines draw as junk, so changes are joined with `;`.
+      $.ui.log(`changed since last session: ${changes.join('; ')}`)
     })
 
     return next(e)
