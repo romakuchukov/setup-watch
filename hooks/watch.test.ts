@@ -45,3 +45,10 @@ test('withoutOwn keeps auto-updates and drops what you installed yourself', () =
     '+ skills synced from claude.ai (Anthropic): pdf',
   ])
 })
+
+test('diff ignores a command that only moved between builtin and plugin', () => {
+  const before = { 'builtin commands': { diff: '' }, 'plugin commands': {} }
+  const after = { 'builtin commands': {}, 'plugin commands': { diff: 'cc-plugin-diff', fresh: 'x' } }
+
+  expect(diff(before, after)).toEqual(['+ plugin commands: fresh'])
+})

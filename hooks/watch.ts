@@ -10,13 +10,26 @@ const SETTLE_MS = 15_000
 const COMMAND = 'setup-watch'
 const USAGE = 'Usage: /setup-watch (status and last report), /setup-watch own on|off'
 
+function commandNames(snapshot: Snapshot): Set<string> {
+  return new Set(
+    Object.entries(snapshot)
+      .filter(([kind]) => kind.endsWith(' commands'))
+      .flatMap(([, names]) => Object.keys(names)),
+  )
+}
+
 export function diff(before: Snapshot, after: Snapshot): string[] {
   const lines: string[] = []
+  // A plugin command shadowing a builtin one of the same name (/diff) is listed under either kind
+  // from session to session, so a command name present on both sides only moved.
+  const afterCommands = commandNames(after)
+  const moved = new Set([...commandNames(before)].filter((name) => afterCommands.has(name)))
   for (const kind of new Set([...Object.keys(before), ...Object.keys(after)])) {
     const old = before[kind] ?? {}
     const now = after[kind] ?? {}
-    const added = Object.keys(now).filter((name) => !(name in old))
-    const removed = Object.keys(old).filter((name) => !(name in now))
+    const isMove = (name: string) => kind.endsWith(' commands') && moved.has(name)
+    const added = Object.keys(now).filter((name) => !(name in old) && !isMove(name))
+    const removed = Object.keys(old).filter((name) => !(name in now) && !isMove(name))
     const changed = Object.keys(now)
       .filter((name) => name in old && old[name] !== now[name])
       .map((name) => `${name} ${old[name]} -> ${now[name]}`)
