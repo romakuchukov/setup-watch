@@ -7,10 +7,10 @@ test('tokenLine leads with the total and ranks sources by size of change', () =>
   const after = { total: 11900, items: { 'skill a': 300, 'MCP x': 2500, 'skill new (p)': 600 } }
 
   expect(tokenLine(before, after)).toBe(
-    'context at start: 11.9k tokens (+1.9k since last session); from: MCP x +1.5k, skill new (p) +600, gone -200',
+    'context 10.0k -> 11.9k tokens (+1.9k); from: MCP x +1.5k, skill new (p) +600, gone -200',
   )
-  expect(tokenLine(after, after)).toBe('context at start: 11.9k tokens (no change)')
-  expect(tokenLine(undefined, after)).toBe('context at start: 11.9k tokens (baseline saved)')
+  expect(tokenLine(after, after)).toBe('')
+  expect(tokenLine(undefined, after)).toBe('')
 })
 
 test('diff groups added, removed and changed items by kind', () => {

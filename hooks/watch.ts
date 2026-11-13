@@ -156,7 +156,7 @@ const formatTokens = (count: number) => (Math.abs(count) >= 1000 ? `${(count / 1
 const signed = (count: number) => `${count > 0 ? '+' : ''}${formatTokens(count)}`
 
 export function tokenLine(before: Tokens | undefined, after: Tokens): string {
-  if (before === undefined) return `context at start: ${formatTokens(after.total)} tokens (baseline saved)`
+  if (before === undefined) return ''
   const delta = after.total - before.total
   const names = new Set([...Object.keys(before.items), ...Object.keys(after.items)])
   const sources = [...names]
@@ -165,8 +165,8 @@ export function tokenLine(before: Tokens | undefined, after: Tokens): string {
     .sort((first, second) => Math.abs(second[1]) - Math.abs(first[1]))
     .slice(0, 5)
     .map(([name, change]) => `${name} ${signed(change)}`)
-  const head = `context at start: ${formatTokens(after.total)} tokens (${delta === 0 ? 'no change' : `${signed(delta)} since last session`})`
-  return sources.length > 0 ? `${head}; from: ${sources.join(', ')}` : head
+  if (delta === 0 && sources.length === 0) return ''
+  return `context ${formatTokens(before.total)} -> ${formatTokens(after.total)} tokens (${signed(delta)}); from: ${sources.join(', ')}`
 }
 
 const TRACK_OWN_KEY = 'track-own'
@@ -192,7 +192,8 @@ export const register: Register = on => {
       const previousTokens = (await $.store.get(TOKENS_KEY)) as Tokens | undefined
       await $.store.set(TOKENS_KEY, tokens)
       // A log row is one line: newlines draw as junk.
-      $.ui.log(tokenLine(previousTokens, tokens))
+      const line = tokenLine(previousTokens, tokens)
+      if (line !== '') $.ui.log(line)
 
       if (previous === undefined) return
       // Filtered at report time, so turning the option on or off never shows false changes.
