@@ -152,8 +152,7 @@ async function readTokens($: EngineInterface): Promise<Tokens> {
   return { total, items }
 }
 
-const formatTokens = (count: number) => (Math.abs(count) >= 1000 ? `${(count / 1000).toFixed(1)}k` : `${count}`)
-const signed = (count: number) => `${count > 0 ? '+' : ''}${formatTokens(count)}`
+const signed = (count: number) => `${count > 0 ? '+' : ''}${count}`
 
 export function tokenLine(before: Tokens | undefined, after: Tokens): string {
   if (before === undefined) return ''
@@ -167,7 +166,7 @@ export function tokenLine(before: Tokens | undefined, after: Tokens): string {
     .map(([name, change]) => `${name} ${signed(change)}`)
   // Equal totals with shifted items is the same cost counted under another label.
   if (delta === 0) return ''
-  return `context ${formatTokens(before.total)} -> ${formatTokens(after.total)} tokens (${signed(delta)}); from: ${sources.join(', ')}`
+  return `context ${before.total} -> ${after.total} tokens (${signed(delta)}); from: ${sources.join(', ')}`
 }
 
 const TRACK_OWN_KEY = 'track-own'
