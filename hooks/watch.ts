@@ -165,7 +165,8 @@ export function tokenLine(before: Tokens | undefined, after: Tokens): string {
     .sort((first, second) => Math.abs(second[1]) - Math.abs(first[1]))
     .slice(0, 5)
     .map(([name, change]) => `${name} ${signed(change)}`)
-  if (delta === 0 && sources.length === 0) return ''
+  // Equal totals with shifted items is the same cost counted under another label.
+  if (delta === 0) return ''
   return `context ${formatTokens(before.total)} -> ${formatTokens(after.total)} tokens (${signed(delta)}); from: ${sources.join(', ')}`
 }
 
