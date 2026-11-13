@@ -1,6 +1,17 @@
 import { expect, test } from 'claude-code/testing'
 
-import { diff, withoutOwn } from './watch'
+import { diff, tokenLine, withoutOwn } from './watch'
+
+test('tokenLine leads with the total and ranks sources by size of change', () => {
+  const before = { total: 10000, items: { 'skill a': 300, 'MCP x': 1000, gone: 200 } }
+  const after = { total: 11900, items: { 'skill a': 300, 'MCP x': 2500, 'skill new (p)': 600 } }
+
+  expect(tokenLine(before, after)).toBe(
+    'context at start: 11.9k tokens (+1.9k since last session); from: MCP x +1.5k, skill new (p) +600, gone -200',
+  )
+  expect(tokenLine(after, after)).toBe('context at start: 11.9k tokens (no change)')
+  expect(tokenLine(undefined, after)).toBe('context at start: 11.9k tokens (baseline saved)')
+})
 
 test('diff groups added, removed and changed items by kind', () => {
   const before = {

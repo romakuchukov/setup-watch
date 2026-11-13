@@ -123,6 +123,52 @@ async function snapshot($: EngineInterface): Promise<Snapshot> {
   return items
 }
 
+// Fixed context cost of a session: item -> tokens. `Messages` is left out, it grows with the chat.
+type Tokens = { total: number; items: Record<string, number> }
+
+const TOKENS_KEY = 'tokens-1'
+// Categories whose rows are itemized below, so they are not also listed whole.
+const ITEMIZED = ['MCP tools', 'Custom agents', 'Memory files', 'Skills', 'Slash commands']
+
+async function readTokens($: EngineInterface): Promise<Tokens> {
+  const breakdown = (await $.session.usage({ breakdown: 'summary' })).context.breakdown
+  const items: Record<string, number> = {}
+  let total = 0
+  if (breakdown === undefined) return { total, items }
+  const addItem = (name: string, tokens: number) => {
+    items[name] = (items[name] ?? 0) + tokens
+  }
+  for (const category of breakdown.categories) {
+    if (category.kind !== 'used' || category.name === 'Messages') continue
+    total += category.tokens
+    if (!ITEMIZED.includes(category.name)) addItem(category.name, category.tokens)
+  }
+  for (const skill of breakdown.skills?.skillFrontmatter ?? [])
+    addItem(`skill ${skill.name}${skill.pluginName ? ` (${skill.pluginName})` : ''}`, skill.tokens)
+  for (const tool of breakdown.mcpTools) if (tool.isLoaded) addItem(`MCP ${tool.serverName}`, tool.tokens)
+  for (const file of breakdown.memoryFiles) addItem(`memory ${file.path.split('/').pop()}`, file.tokens)
+  for (const agent of breakdown.agents) addItem(`agent ${agent.agentType}`, agent.tokens)
+  if (breakdown.slashCommands) addItem('command list', breakdown.slashCommands.tokens)
+  return { total, items }
+}
+
+const formatTokens = (count: number) => (Math.abs(count) >= 1000 ? `${(count / 1000).toFixed(1)}k` : `${count}`)
+const signed = (count: number) => `${count > 0 ? '+' : ''}${formatTokens(count)}`
+
+export function tokenLine(before: Tokens | undefined, after: Tokens): string {
+  if (before === undefined) return `context at start: ${formatTokens(after.total)} tokens (baseline saved)`
+  const delta = after.total - before.total
+  const names = new Set([...Object.keys(before.items), ...Object.keys(after.items)])
+  const sources = [...names]
+    .map((name) => [name, (after.items[name] ?? 0) - (before.items[name] ?? 0)] as const)
+    .filter(([, change]) => change !== 0)
+    .sort((first, second) => Math.abs(second[1]) - Math.abs(first[1]))
+    .slice(0, 5)
+    .map(([name, change]) => `${name} ${signed(change)}`)
+  const head = `context at start: ${formatTokens(after.total)} tokens (${delta === 0 ? 'no change' : `${signed(delta)} since last session`})`
+  return sources.length > 0 ? `${head}; from: ${sources.join(', ')}` : head
+}
+
 const TRACK_OWN_KEY = 'track-own'
 
 async function isTrackingOwn($: EngineInterface): Promise<boolean> {
@@ -141,16 +187,17 @@ export const register: Register = on => {
       const previous = (await $.store.get(STORE_KEY)) as Snapshot | undefined
       await $.store.set(STORE_KEY, current)
 
-      if (previous === undefined) {
-        $.ui.log('baseline saved, changes show from the next session')
-        return
-      }
+      // Token cost leads the log row; the name-level changes stay in /setup-watch.
+      const tokens = await readTokens($)
+      const previousTokens = (await $.store.get(TOKENS_KEY)) as Tokens | undefined
+      await $.store.set(TOKENS_KEY, tokens)
+      // A log row is one line: newlines draw as junk.
+      $.ui.log(tokenLine(previousTokens, tokens))
+
+      if (previous === undefined) return
       // Filtered at report time, so turning the option on or off never shows false changes.
       const changes = (await isTrackingOwn($)) ? diff(previous, current) : diff(...withoutOwn(previous, current))
       await $.store.set('last-report', changes)
-      if (changes.length === 0) return
-      // A log row is one line: newlines draw as junk, so changes are joined with `;`.
-      $.ui.log(`changed since last session: ${changes.join('; ')}`)
     })
 
     return next(e)
