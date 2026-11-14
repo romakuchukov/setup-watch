@@ -123,30 +123,25 @@ async function snapshot($: EngineInterface): Promise<Snapshot> {
   return items
 }
 
-// Fixed context cost of a session: item -> tokens. `Messages` is left out, it grows with the chat.
+// Context cost of what gets added to a setup: skills, MCP servers, agents, commands. The total is their sum.
+// The system prompt, built-in tools and memory files are left out: they shift every session (cwd, date,
+// your own notes) and would print a line when nothing was added. `Messages` is left out too.
 type Tokens = { total: number; items: Record<string, number> }
 
-const TOKENS_KEY = 'tokens-1'
-// Categories whose rows are itemized below, so they are not also listed whole.
-const ITEMIZED = ['MCP tools', 'Custom agents', 'Memory files', 'Skills', 'Slash commands']
+const TOKENS_KEY = 'tokens-2'
 
 async function readTokens($: EngineInterface): Promise<Tokens> {
   const breakdown = (await $.session.usage({ breakdown: 'summary' })).context.breakdown
   const items: Record<string, number> = {}
   let total = 0
-  if (breakdown === undefined) return { total, items }
   const addItem = (name: string, tokens: number) => {
     items[name] = (items[name] ?? 0) + tokens
+    total += tokens
   }
-  for (const category of breakdown.categories) {
-    if (category.kind !== 'used' || category.name === 'Messages') continue
-    total += category.tokens
-    if (!ITEMIZED.includes(category.name)) addItem(category.name, category.tokens)
-  }
+  if (breakdown === undefined) return { total, items }
   for (const skill of breakdown.skills?.skillFrontmatter ?? [])
     addItem(`skill ${skill.name}${skill.pluginName ? ` (${skill.pluginName})` : ''}`, skill.tokens)
   for (const tool of breakdown.mcpTools) if (tool.isLoaded) addItem(`MCP ${tool.serverName}`, tool.tokens)
-  for (const file of breakdown.memoryFiles) addItem(`memory ${file.path.split('/').pop()}`, file.tokens)
   for (const agent of breakdown.agents) addItem(`agent ${agent.agentType}`, agent.tokens)
   if (breakdown.slashCommands) addItem('command list', breakdown.slashCommands.tokens)
   return { total, items }
