@@ -141,7 +141,8 @@ async function readTokens($: EngineInterface): Promise<Tokens> {
   if (breakdown === undefined) return { total, items }
   for (const skill of breakdown.skills?.skillFrontmatter ?? [])
     addItem(`skill ${skill.name}${skill.pluginName ? ` (${skill.pluginName})` : ''}`, skill.tokens)
-  for (const tool of breakdown.mcpTools) if (tool.isLoaded) addItem(`MCP ${tool.serverName}`, tool.tokens)
+  // Counted whether loaded or not: isLoaded flips when a deferred tool gets searched for or used, not when setup changes.
+  for (const tool of breakdown.mcpTools) addItem(`MCP ${tool.serverName}`, tool.tokens)
   for (const agent of breakdown.agents) addItem(`agent ${agent.agentType}`, agent.tokens)
   if (breakdown.slashCommands) addItem('command list', breakdown.slashCommands.tokens)
   return { total, items }
