@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { diff, tokenLine, withoutOwn } from './watch'
+import { diff, mcpServersIn, tokenLine, withoutOwn } from './watch'
 
 test('tokenLine leads with the total and ranks sources by size of change', () => {
   const before = { total: 10000, items: { 'skill a': 300, 'MCP x': 1000, gone: 200 } }
@@ -63,4 +63,14 @@ test('diff ignores a command that only moved between builtin and plugin', () => 
   const after = { 'builtin commands': {}, 'plugin commands': { diff: 'cc-plugin-diff', fresh: 'x' } }
 
   expect(diff(before, after)).toEqual(['+ plugin commands: fresh'])
+})
+
+test('mcpServersIn lists servers of every MCP kind and nothing else', () => {
+  const snapshot = {
+    'MCP servers (yours)': { headroom: '3' },
+    'MCP servers (from plugins)': { 'plugin_context-mode_context-mode': '11' },
+    'builtin tools': { Bash: '' },
+  }
+
+  expect(mcpServersIn(snapshot)).toEqual(['headroom', 'plugin_context-mode_context-mode'])
 })

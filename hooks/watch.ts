@@ -6,7 +6,9 @@ type Snapshot = Record<string, Record<string, string>>
 // Bump when Snapshot's shape changes: an older stored value is then ignored, not misread.
 const STORE_KEY = 'snapshot-4'
 // MCP servers connect after session.start; listing earlier reports them as removed.
+// The reading waits until last session's servers are all back, at most SETTLE_MS.
 const SETTLE_MS = 15_000
+const POLL_MS = 1_000
 const COMMAND = 'setup-watch'
 const USAGE = 'Usage: /setup-watch (status and last report), /setup-watch own on|off'
 
@@ -123,6 +125,21 @@ async function snapshot($: EngineInterface): Promise<Snapshot> {
   return items
 }
 
+export function mcpServersIn(snapshot: Snapshot): string[] {
+  return Object.entries(snapshot)
+    .filter(([kind]) => kind.startsWith('MCP servers'))
+    .flatMap(([, servers]) => Object.keys(servers))
+}
+
+// shortcut: a server you removed since last session makes this wait the full SETTLE_MS once.
+async function waitForMcpServers($: EngineInterface, expected: string[]) {
+  for (let waited = 0; waited < SETTLE_MS; waited += POLL_MS) {
+    const connected = new Set((await $.tool.list()).filter((tool) => tool.mcp).map((tool) => tool.name.split('__')[1]))
+    if (expected.length > 0 && expected.every((server) => connected.has(server))) return
+    await $.clock.sleep(POLL_MS)
+  }
+}
+
 // Context cost of what gets added to a setup: skills, MCP servers, agents, commands. The total is their sum.
 // The system prompt, built-in tools and memory files are left out: they shift every session (cwd, date,
 // your own notes) and would print a line when nothing was added. `Messages` is left out too.
@@ -179,9 +196,10 @@ export const register: Register = on => {
       description: 'Show what changed in your setup, or turn tracking of your own changes on or off',
       argumentHint: 'own on|off',
     })
-    $.clock.after(SETTLE_MS, async () => {
-      const current = await snapshot($)
+    $.clock.after(POLL_MS, async () => {
       const previous = (await $.store.get(STORE_KEY)) as Snapshot | undefined
+      await waitForMcpServers($, previous === undefined ? [] : mcpServersIn(previous))
+      const current = await snapshot($)
       await $.store.set(STORE_KEY, current)
 
       // Token cost leads the log row; the name-level changes stay in /setup-watch.
