@@ -140,7 +140,8 @@ async function waitForMcpServers($: EngineInterface, expected: string[]) {
   }
 }
 
-// Context cost of what gets added to a setup: skills, MCP servers, agents, commands. The total is their sum.
+// Size of what gets added to a setup: skills, MCP servers (every tool's full schema, loaded or not), agents,
+// commands. The total is their sum, so it is the most the setup can cost, not what the context holds now.
 // The system prompt, built-in tools and memory files are left out: they shift every session (cwd, date,
 // your own notes) and would print a line when nothing was added. `Messages` is left out too.
 type Tokens = { total: number; items: Record<string, number> }
@@ -180,7 +181,7 @@ export function tokenLine(before: Tokens | undefined, after: Tokens): string {
     .map(([name, change]) => `${name} ${signed(change)}`)
   // Equal totals with shifted items is the same cost counted under another label.
   if (delta === 0) return ''
-  return `context ${formatTokens(before.total)} -> ${formatTokens(after.total)} tokens (${signed(delta)}); from: ${sources.join(', ')}`
+  return `setup size ${formatTokens(before.total)} -> ${formatTokens(after.total)} tokens (${signed(delta)}); from: ${sources.join(', ')}`
 }
 
 const TRACK_OWN_KEY = 'track-own'
@@ -197,15 +198,19 @@ export const register: Register = on => {
       argumentHint: 'own on|off',
     })
     $.clock.after(POLL_MS, async () => {
-      const previous = (await $.store.get(STORE_KEY)) as Snapshot | undefined
+      // The desktop app brings its own MCP servers, so each host keeps its own readings.
+      const host = (await $.env.get('CLAUDE_CODE_ENTRYPOINT')) ?? 'cli'
+      const storeKey = `${STORE_KEY} ${host}`
+      const tokensKey = `${TOKENS_KEY} ${host}`
+      const previous = (await $.store.get(storeKey)) as Snapshot | undefined
       await waitForMcpServers($, previous === undefined ? [] : mcpServersIn(previous))
       const current = await snapshot($)
-      await $.store.set(STORE_KEY, current)
+      await $.store.set(storeKey, current)
 
       // Token cost leads the log row; the name-level changes stay in /setup-watch.
       const tokens = await readTokens($)
-      const previousTokens = (await $.store.get(TOKENS_KEY)) as Tokens | undefined
-      await $.store.set(TOKENS_KEY, tokens)
+      const previousTokens = (await $.store.get(tokensKey)) as Tokens | undefined
+      await $.store.set(tokensKey, tokens)
       // A log row is one line: newlines draw as junk.
       const line = tokenLine(previousTokens, tokens)
       if (line !== '') $.ui.log(line)
