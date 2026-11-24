@@ -111,6 +111,10 @@ MCP servers connect in the background after a session starts. Taking the snapsho
 
 Yes, that's the main use case. It detects the version change and lists every new built-in skill, command and tool the update shipped. It uses Claude Code's plugin API, which is in early access and can change between releases.
 
+### Quick CLI mod update
+
+claude plugin marketplace update setup-watch && claude plugin update setup-watch
+
 ## License
 
 [MIT](LICENSE)
