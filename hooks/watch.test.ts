@@ -6,8 +6,11 @@ test('tokenLine leads with the total and ranks sources by size of change', () =>
   const before = { total: 10000, items: { 'skill a': 300, 'MCP x': 1000, gone: 200 } }
   const after = { total: 11900, items: { 'skill a': 300, 'MCP x': 2500, 'skill new (p)': 600 } }
 
-  expect(tokenLine(before, after)).toBe(
+  expect(tokenLine(before, after, false)).toBe(
     'setup size 10,000 -> 11,900 tokens (+1,900); from: MCP x +1,500, skill new (p) +600, gone -200',
+  )
+  expect(tokenLine(before, after)).toBe(
+    'setup size 10,000 -> 11,900 tokens (+1,900);\nfrom: gone -200\n      MCP x +1,500\n      skill new (p) +600',
   )
   expect(tokenLine(after, after)).toBe('')
   expect(tokenLine({ total: 5, items: { a: 117 } }, { total: 5, items: { b: 117 } })).toBe('')

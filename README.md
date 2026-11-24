@@ -26,6 +26,10 @@ setup-watch: changed since last session: ~ Claude Code: version 2.1.314 -> 2.1.3
 
 One line, changes separated by `;`. `+` added, `-` removed, `~` changed. MCP server numbers are tool counts.
 
+Setup size, in tokens, is reported too, with the biggest changes behind it:
+
+![setup-watch reporting setup size 20,972 -> 21,322 tokens, with the skills that changed](screenshot-1.jpg)
+
 ## What it tracks
 
 By default setup-watch reports only what changed **under you**: things you didn't do yourself.

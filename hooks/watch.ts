@@ -10,7 +10,7 @@ const STORE_KEY = 'snapshot-4'
 const SETTLE_MS = 15_000
 const POLL_MS = 1_000
 const COMMAND = 'setup-watch'
-const USAGE = 'Usage: /setup-watch (status and last report), /setup-watch own on|off'
+const USAGE = 'Usage: /setup-watch (status and last report), /setup-watch own on|off, /setup-watch layout multi|single'
 
 function commandNames(snapshot: Snapshot): Set<string> {
   return new Set(
@@ -169,7 +169,7 @@ async function readTokens($: EngineInterface): Promise<Tokens> {
 const formatTokens = (count: number) => count.toLocaleString('en-US')
 const signed = (count: number) => `${count > 0 ? '+' : ''}${formatTokens(count)}`
 
-export function tokenLine(before: Tokens | undefined, after: Tokens): string {
+export function tokenLine(before: Tokens | undefined, after: Tokens, isMultiline = true): string {
   if (before === undefined) return ''
   const delta = after.total - before.total
   const names = new Set([...Object.keys(before.items), ...Object.keys(after.items)])
@@ -181,8 +181,14 @@ export function tokenLine(before: Tokens | undefined, after: Tokens): string {
     .map(([name, change]) => `${name} ${signed(change)}`)
   // Equal totals with shifted items is the same cost counted under another label.
   if (delta === 0) return ''
-  return `setup size ${formatTokens(before.total)} -> ${formatTokens(after.total)} tokens (${signed(delta)}); from: ${sources.join(', ')}`
+  const header = `setup size ${formatTokens(before.total)} -> ${formatTokens(after.total)} tokens (${signed(delta)});`
+  if (!isMultiline) return `${header} from: ${sources.join(', ')}`
+  // Shortest first; later rows line up under the first source.
+  const rows = sources.sort((first, second) => first.length - second.length).map((source, index) => (index === 0 ? `from: ${source}` : `      ${source}`))
+  return [header, ...rows].join('\n')
 }
+
+const LAYOUT_KEY = 'token-layout'
 
 const TRACK_OWN_KEY = 'track-own'
 
@@ -211,8 +217,7 @@ export const register: Register = on => {
       const tokens = await readTokens($)
       const previousTokens = (await $.store.get(tokensKey)) as Tokens | undefined
       await $.store.set(tokensKey, tokens)
-      // A log row is one line: newlines draw as junk.
-      const line = tokenLine(previousTokens, tokens)
+      const line = tokenLine(previousTokens, tokens, (await $.store.get(LAYOUT_KEY)) !== 'single')
       if (line !== '') $.ui.log(line)
 
       if (previous === undefined) return
@@ -229,6 +234,10 @@ export const register: Register = on => {
     if (subcommand === 'own' && (value === 'on' || value === 'off')) {
       await $.store.set(TRACK_OWN_KEY, value === 'on')
       return { text: `Tracking your own changes is now ${value}. It applies from the next session's report.` }
+    }
+    if (subcommand === 'layout' && (value === 'multi' || value === 'single')) {
+      await $.store.set(LAYOUT_KEY, value)
+      return { text: `Token line layout is now ${value}. It applies from the next session.` }
     }
     if (subcommand !== undefined && subcommand !== '') return { text: USAGE }
 
