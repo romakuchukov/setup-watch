@@ -3,7 +3,7 @@
 **setup-watch** is a free, open source [Claude Code](https://docs.claude.com/en/docs/claude-code) plugin (also called a Claude Code mod or extension). At the start of every session it tells you which **skills, slash commands, MCP servers, plugins and built-in tools** were added, removed or updated since your last session, without you doing anything. Use it to catch context window bloat early and keep your token usage down.
 
 - No setup. Install it and it runs.
-- No model calls. It costs **zero tokens**.
+- No model calls. It spends **no tokens** on the model. Its `/setup-watch` command adds a few tokens to your command list.
 - Silent when nothing changed.
 
 ## Why track Claude Code changes?
@@ -93,7 +93,7 @@ Use `/plugin` to disable or uninstall plugins, which also removes their skills. 
 
 ### Does setup-watch use tokens or send data anywhere?
 
-No. It reads Claude Code's own lists of commands, tools and plugins locally, and stores one snapshot in the plugin's local store. It never calls the model or the network.
+No. It reads Claude Code's own lists of commands, tools and plugins locally, and stores one snapshot in the plugin's local store. It never calls the model or the network. The one thing it adds to your context is the `/setup-watch` entry in the command list: a name and a short description, a few tokens per session.
 
 ### How does it tell Anthropic's changes from mine?
 
